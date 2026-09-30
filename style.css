@@ -91,7 +91,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .btn:hover:not(:disabled) { background: var(--chip-hover); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-.btn-block { width: 100%; }
+.btn-block { width: 100%; margin-top: 18px; }
 
 .chip {
   display: inline-flex;
@@ -235,12 +235,11 @@ input:focus, select:focus { border-color: var(--accent); }
   padding: 26px;
 }
 
-.add-panel { display: none; margin-bottom: 26px; padding-bottom: 26px; border-bottom: 1px solid var(--border); }
-.add-panel.open { display: block; }
+.add-panel { display: block; }
 .add-panel h3 { font-size: 1.15rem; margin-bottom: 4px; }
 .add-panel form { max-width: 460px; }
 
-.chip-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
 .category-chip {
   background: var(--chip-bg);
   border: 1px solid var(--border);
@@ -310,7 +309,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .row-info { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .row-name { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.01em; }
 .row-meta { font-size: 0.78rem; color: var(--text-dim); }
-.row-timer { font-size: 0.78rem; color: var(--accent); font-weight: 700; white-space: nowrap; }
 
 .row-action {
   background: none;
