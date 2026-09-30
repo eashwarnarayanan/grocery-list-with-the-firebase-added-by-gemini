@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  // Firebase Configuration
+  // Firebase Configuration[cite: 1]
   const firebaseConfig = {
     apiKey: "AIzaSyC7H4Z4SHfpFaZXJdMeAKG9szDg2KUdBpo",
     authDomain: "grocery-list-5533e.firebaseapp.com",
@@ -13,7 +13,8 @@
     measurementId: "G-LNQZNWG61X"
   };
 
-  // Initialize Firebase
+  // Initialize Firebase Realtime Database
+  let db = null;
   if (typeof firebase !== 'undefined') {
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
@@ -21,6 +22,7 @@
     if (firebase.analytics) {
       firebase.analytics();
     }
+    db = firebase.database();
   }
 
   function safeGet(store, key) { try { return store.getItem(key); } catch (e) { return null; } }
@@ -72,7 +74,6 @@
   signOutBtn.addEventListener('click', () => {
     currentUser = null;
     safeRemove(localStorage, AUTH_KEY);
-    clearAllTimers();
     showLogin();
   });
 
@@ -130,8 +131,30 @@
   }
 
   let state = emptyState();
+  let undoStack = [];
+  let redoStack = [];
+  let isRemoteSync = false;
 
-  function saveState() { safeSet(localStorage, 'grocery.state', JSON.stringify(state)); }
+  function pushHistory() {
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > 30) undoStack.shift();
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
+  }
+
+  function saveState() {
+    safeSet(localStorage, 'grocery.state', JSON.stringify(state));
+    if (db && !isRemoteSync) {
+      db.ref('groceryState').set(state);
+    }
+  }
 
   function loadState() {
     try {
@@ -155,7 +178,13 @@
     }
   }
 
-  function activeItems() { return state.listsData[state.activeList].items; }
+  function activeItems() {
+    if (!state.listsData[state.activeList]) {
+      state.listsData[state.activeList] = { items: [] };
+    }
+    return state.listsData[state.activeList].items;
+  }
+
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   function suggestCategory(rawName) {
@@ -168,6 +197,344 @@
     return '📦 Other';
   }
 
-  function clearAllTimers() { }
-  function init() { }
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+  }
+
+  // DOM Elements
+  const listNav = document.getElementById('listNav');
+  const pageTitle = document.getElementById('pageTitle');
+  const tabList = document.getElementById('tabList');
+  const tabRemoved = document.getElementById('tabRemoved');
+  const toggleAddBtn = document.getElementById('toggleAddBtn');
+  const addPanel = document.getElementById('addPanel');
+  const viewList = document.getElementById('viewList');
+  const viewRemoved = document.getElementById('viewRemoved');
+  const addForm = document.getElementById('addForm');
+  const itemName = document.getElementById('itemName');
+  const categoryInput = document.getElementById('categoryInput');
+  const quickCategories = document.getElementById('quickCategories');
+  const customChipInput = document.getElementById('customChipInput');
+  const addChipBtn = document.getElementById('addChipBtn');
+  const quantityInput = document.getElementById('quantityInput');
+  const unitInput = document.getElementById('unitInput');
+  const searchInput = document.getElementById('searchInput');
+  const listGroups = document.getElementById('listGroups');
+  const removedGroups = document.getElementById('removedGroups');
+  const countActive = document.getElementById('countActive');
+  const countRemoved = document.getElementById('countRemoved');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+
+  let selectedCategory = '';
+
+  function renderSidebar() {
+    if (!listNav) return;
+    listNav.innerHTML = '';
+    LISTS.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = `nav-btn ${name === state.activeList ? 'active' : ''}`;
+      btn.type = 'button';
+      btn.innerHTML = `<span>${LIST_ICONS[name] || '📋'}</span> <span>${name}</span>`;
+      btn.addEventListener('click', () => {
+        state.activeList = name;
+        saveState();
+        renderAll();
+      });
+      listNav.appendChild(btn);
+    });
+  }
+
+  function renderQuickCategories() {
+    if (!quickCategories) return;
+    quickCategories.innerHTML = '';
+    const allCategories = [...Object.keys(BUILT_IN_CATEGORIES), ...state.customChips];
+    allCategories.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = `category-chip ${selectedCategory === cat ? 'chosen' : ''}`;
+      chip.textContent = cat;
+      chip.addEventListener('click', () => {
+        selectedCategory = cat;
+        if (categoryInput) categoryInput.value = cat;
+        renderQuickCategories();
+      });
+      quickCategories.appendChild(chip);
+    });
+  }
+
+  function renderAll() {
+    if (pageTitle) {
+      pageTitle.innerHTML = `${LIST_ICONS[state.activeList] || '🛒'} ${state.activeList} <span class="live-badge">LIVE</span>`;
+    }
+    renderSidebar();
+    renderQuickCategories();
+    renderItems();
+    updateUndoRedoButtons();
+  }
+
+  function renderItems() {
+    const items = activeItems();
+    const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    const activeList = items.filter(i => !i.removed && (search ? i.name.toLowerCase().includes(search) : true));
+    const removedList = items.filter(i => i.removed);
+
+    if (countActive) countActive.textContent = items.filter(i => !i.removed).length;
+    if (countRemoved) countRemoved.textContent = removedList.length;
+
+    // Active List Render
+    if (listGroups) {
+      listGroups.innerHTML = '';
+      if (activeList.length === 0) {
+        listGroups.innerHTML = '<div class="empty">No items found in this list.</div>';
+      } else {
+        const grouped = {};
+        activeList.forEach(item => {
+          const cat = item.category || '📦 Other';
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(item);
+        });
+
+        for (const [cat, catItems] of Object.entries(grouped)) {
+          const groupEl = document.createElement('div');
+          groupEl.className = 'group';
+          groupEl.innerHTML = `<div class="group-title">${cat}</div>`;
+          const rowsEl = document.createElement('div');
+          rowsEl.className = 'rows';
+
+          catItems.forEach(item => {
+            const row = document.createElement('div');
+            row.className = `row ${item.purchased ? 'purchased' : ''}`;
+            row.innerHTML = `
+              <label class="checkbox">
+                <input type="checkbox" ${item.purchased ? 'checked' : ''} />
+                <span class="checkmark"></span>
+              </label>
+              <div class="row-info">
+                <span class="row-name">${item.name}</span>
+                <span class="row-meta">${item.quantity} ${item.unit}</span>
+              </div>
+              <button type="button" class="row-action delete" title="Remove item">🗑️</button>
+            `;
+
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            checkbox.addEventListener('change', () => {
+              pushHistory();
+              item.purchased = checkbox.checked;
+              saveState();
+              renderItems();
+            });
+
+            const deleteBtn = row.querySelector('.delete');
+            deleteBtn.addEventListener('click', () => {
+              pushHistory();
+              item.removed = true;
+              saveState();
+              renderItems();
+              showToast(`Moved "${item.name}" to Removed`);
+            });
+
+            rowsEl.appendChild(row);
+          });
+
+          groupEl.appendChild(rowsEl);
+          listGroups.appendChild(groupEl);
+        }
+      }
+    }
+
+    // Removed List Render
+    if (removedGroups) {
+      removedGroups.innerHTML = '';
+      if (removedList.length === 0) {
+        removedGroups.innerHTML = '<div class="empty">No removed items.</div>';
+      } else {
+        const rowsEl = document.createElement('div');
+        rowsEl.className = 'rows';
+
+        removedList.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.innerHTML = `
+            <div class="row-info">
+              <span class="row-name">${item.name}</span>
+              <span class="row-meta">${item.quantity} ${item.unit} • ${item.category}</span>
+            </div>
+            <button type="button" class="row-action restore" title="Restore item">↩ Restore</button>
+            <button type="button" class="row-action delete" title="Delete permanently">❌</button>
+          `;
+
+          const restoreBtn = row.querySelector('.restore');
+          restoreBtn.addEventListener('click', () => {
+            pushHistory();
+            item.removed = false;
+            saveState();
+            renderItems();
+            showToast(`Restored "${item.name}"`);
+          });
+
+          const deleteBtn = row.querySelector('.delete');
+          deleteBtn.addEventListener('click', () => {
+            pushHistory();
+            const idx = items.indexOf(item);
+            if (idx !== -1) items.splice(idx, 1);
+            saveState();
+            renderItems();
+            showToast(`Permanently deleted "${item.name}"`);
+          });
+
+          rowsEl.appendChild(row);
+        });
+
+        removedGroups.appendChild(rowsEl);
+      }
+    }
+  }
+
+  // Auto-detect category
+  if (itemName) {
+    itemName.addEventListener('input', () => {
+      const detected = suggestCategory(itemName.value);
+      selectedCategory = detected;
+      if (categoryInput) categoryInput.value = detected;
+      renderQuickCategories();
+    });
+  }
+
+  // Form Submit - Add Item
+  if (addForm) {
+    addForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = itemName.value.trim();
+      if (!name) return;
+
+      const category = categoryInput.value.trim() || '📦 Other';
+      const quantity = parseInt(quantityInput.value, 10) || 1;
+      const unit = unitInput.value || 'pcs';
+
+      pushHistory();
+
+      if (category && !BUILT_IN_CATEGORIES[category] && !state.customChips.includes(category)) {
+        state.customChips.push(category);
+      }
+
+      state.learned[name.toLowerCase()] = category;
+
+      activeItems().push({
+        id: uid(),
+        name,
+        category,
+        quantity,
+        unit,
+        purchased: false,
+        removed: false
+      });
+
+      saveState();
+      itemName.value = '';
+      categoryInput.value = '';
+      selectedCategory = '';
+      quantityInput.value = '1';
+      renderAll();
+      showToast(`Added "${name}" to ${state.activeList}`);
+    });
+  }
+
+  // Add Custom Category Chip
+  if (addChipBtn) {
+    addChipBtn.addEventListener('click', () => {
+      const val = customChipInput.value.trim();
+      if (val && !state.customChips.includes(val) && !BUILT_IN_CATEGORIES[val]) {
+        pushHistory();
+        state.customChips.push(val);
+        customChipInput.value = '';
+        saveState();
+        renderQuickCategories();
+        showToast(`Added category "${val}"`);
+      }
+    });
+  }
+
+  // Tab switching
+  if (tabList) {
+    tabList.addEventListener('click', () => {
+      tabList.classList.add('selected');
+      tabRemoved.classList.remove('selected');
+      viewList.classList.add('active');
+      viewRemoved.classList.remove('active');
+    });
+  }
+
+  if (tabRemoved) {
+    tabRemoved.addEventListener('click', () => {
+      tabRemoved.classList.add('selected');
+      tabList.classList.remove('selected');
+      viewRemoved.classList.add('active');
+      viewList.classList.remove('active');
+    });
+  }
+
+  // Toggle Panel
+  if (toggleAddBtn) {
+    toggleAddBtn.addEventListener('click', () => {
+      addPanel.classList.toggle('open');
+    });
+  }
+
+  // Search Filter
+  if (searchInput) {
+    searchInput.addEventListener('input', renderItems);
+  }
+
+  // Undo / Redo
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      if (undoStack.length === 0) return;
+      redoStack.push(JSON.stringify(state));
+      const previous = undoStack.pop();
+      state = JSON.parse(previous);
+      saveState();
+      renderAll();
+    });
+  }
+
+  if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+      if (redoStack.length === 0) return;
+      undoStack.push(JSON.stringify(state));
+      const next = redoStack.pop();
+      state = JSON.parse(next);
+      saveState();
+      renderAll();
+    });
+  }
+
+  function init() {
+    state = loadState();
+
+    // Firebase live synchronization
+    if (db) {
+      db.ref('groceryState').on('value', (snapshot) => {
+        const remoteData = snapshot.val();
+        if (remoteData) {
+          isRemoteSync = true;
+          state = remoteData;
+          safeSet(localStorage, 'grocery.state', JSON.stringify(state));
+          renderAll();
+          isRemoteSync = false;
+        }
+      });
+    }
+
+    renderAll();
+  }
+
+  if (savedUser === CREDENTIALS.username) {
+    init();
+  }
 })();
