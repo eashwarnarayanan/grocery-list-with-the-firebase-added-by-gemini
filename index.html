@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Grocery List</title>
+<script>
+  (function () {
+    try {
+      if (localStorage.getItem('grocery.theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    } catch (e) { }
+  })();
+</script>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="loginScreen" class="screen" style="display: flex;">
+  <form id="loginForm" class="login-card">
+    <div class="login-brand">🛒 Grocery List</div>
+    <p class="login-sub">Sign in to manage your smart grocery list</p>
+
+    <label for="loginUsername">Username</label>
+    <input id="loginUsername" type="text" autocomplete="username" placeholder="Username" />
+
+    <label for="loginPassword">Password</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
+
+    <p id="loginError" class="error-text" style="display: none;">Incorrect username or password.</p>
+
+    <button type="submit" class="btn btn-primary btn-block">Log in</button>
+  </form>
+</div>
+
+<div id="appRoot" class="app" style="display: none;">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">🛒 Smart List</div>
+    <nav id="listNav" class="list-nav"></nav>
+  </aside>
+
+  <main class="main">
+    <header class="page-header">
+      <div>
+        <h1 id="pageTitle">Grocery List <span class="live-badge">LIVE</span></h1>
+        <p class="page-subtitle">Smart Auto-Categorised Shopping Assistant</p>
+      </div>
+      <div class="header-actions">
+        <span class="chip">👤 <span id="username">ASWATHY</span></span>
+        <button id="themeBtn" class="chip chip-btn" type="button">🌙 Dark</button>
+        <button id="signOutBtn" class="chip chip-btn danger" type="button">Sign Out</button>
+      </div>
+    </header>
+
+    <nav class="tabs-row">
+      <button class="pill selected" id="tabList" type="button">Active List <span class="count" id="countActive">0</span></button>
+      <button class="pill pill-primary" id="toggleAddBtn" type="button">+ Add Item</button>
+      <button class="pill" id="tabRemoved" type="button">Removed <span class="count" id="countRemoved">0</span></button>
+      <div class="tab-spacer"></div>
+      <button id="undoBtn" class="pill" type="button" disabled>↩ Undo</button>
+      <button id="redoBtn" class="pill" type="button" disabled>↪ Redo</button>
+    </nav>
+
+    <section class="card">
+
+      <div id="addPanel" class="add-panel open">
+        <h3>Add New Grocery Item</h3>
+        <form id="addForm">
+          <label for="itemName">Item Name</label>
+          <input id="itemName" type="text" placeholder="e.g. Puff pastry, Apples, Milk..." autocomplete="off" />
+
+          <label for="categoryInput">Category (auto-detected or custom)</label>
+          <input id="categoryInput" type="text" placeholder="e.g. 🍞 Bakery" autocomplete="off" readonly style="background-color: var(--chip-bg); cursor: default;" />
+          <p class="hint" id="categoryHint">Type item name above - category will auto-detect!</p>
+
+          <label>Quick Categories</label>
+          <div id="quickCategories" class="chip-grid"></div>
+
+          <label for="customChipInput">Add Custom Category Chip</label>
+          <div class="inline-row">
+            <input id="customChipInput" type="text" placeholder="e.g. 🐾 Pet Supplies" />
+            <button type="button" id="addChipBtn" class="btn">Add</button>
+          </div>
+
+          <div class="field-row">
+            <div class="field-small">
+              <label for="quantityInput">Qty</label>
+              <input id="quantityInput" type="number" min="1" value="1" />
+            </div>
+            <div class="field-small">
+              <label for="unitInput">Unit</label>
+              <select id="unitInput">
+                <option value="pcs">pcs</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="l">l</option>
+                <option value="ml">ml</option>
+                <option value="pack">pack</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Add to list</button>
+        </form>
+      </div>
+
+      <div id="viewList" class="view active">
+        <input id="searchInput" type="text" class="search-input" placeholder="Search this list…" />
+        <div id="listGroups" class="groups"></div>
+      </div>
+
+      <div id="viewRemoved" class="view">
+        <div id="removedGroups" class="groups"></div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast" style="display: none;"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script src="script.js"></script>
+</body>
+</html>
