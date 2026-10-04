@@ -144,7 +144,7 @@
     if (redoBtn) redoBtn.disabled = redoStack.length === 0;
   }
 
-  // Save State locally AND to Firebase Realtime Database
+  // Save State locally AND sync to Firebase Realtime Database
   function saveState() {
     safeSet(localStorage, 'grocery.state', JSON.stringify(state));
     if (db && !isRemoteSync) {
@@ -187,13 +187,12 @@
   function suggestCategory(rawName) {
     const q = rawName.trim().toLowerCase();
     if (!q) return '';
-    // 1st Priority: Check if the app previously "learned" this item
+    // Priority 1: Check learned item history
     if (state.learned[q]) return state.learned[q];
-    // 2nd Priority: Check standard built-in keyword list
+    // Priority 2: Check built-in keyword dictionary
     for (const [cat, keywords] of Object.entries(BUILT_IN_CATEGORIES)) {
       if (keywords.some(kw => q.includes(kw) || kw.includes(q))) return cat;
     }
-    // Default fallback
     return '📦 Other';
   }
 
@@ -232,7 +231,7 @@
 
   let selectedCategory = '';
 
-  // 6. View Switching Tabs Logic
+  // 6. Navigation / Tab Switching
   function switchTab(viewName) {
     tabList.classList.remove('selected');
     toggleAddBtn.classList.remove('selected');
@@ -302,7 +301,7 @@
     updateUndoRedoButtons();
   }
 
-  // Render Active & Removed Items
+  // Render Items List
   function renderItems() {
     const items = activeItems();
     const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
@@ -422,7 +421,7 @@
     }
   }
 
-  // 7. Auto-detect category on typing
+  // 7. Auto-detect category on typing item name
   if (itemName) {
     itemName.addEventListener('input', () => {
       const detected = suggestCategory(itemName.value);
@@ -432,7 +431,15 @@
     });
   }
 
-  // 8. Handle Item Form Submission
+  // 8. Allow typing custom category manually in category input
+  if (categoryInput) {
+    categoryInput.addEventListener('input', () => {
+      selectedCategory = categoryInput.value.trim();
+      renderQuickCategories();
+    });
+  }
+
+  // 9. Handle Item Form Submission
   if (addForm) {
     addForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -445,12 +452,12 @@
 
       pushHistory();
 
-      // If category is custom, save to custom chips list
+      // If category is custom and not in default/existing list, save to custom chips
       if (category && !BUILT_IN_CATEGORIES[category] && !state.customChips.includes(category)) {
         state.customChips.push(category);
       }
 
-      // Feature: LEARN this item's custom category mapping for next time!
+      // Automatically LEARN this item's custom category mapping for next time
       state.learned[name.toLowerCase()] = category;
 
       activeItems().push({
@@ -465,7 +472,7 @@
 
       saveState();
 
-      // Reset Form Fields
+      // Reset form fields
       itemName.value = '';
       categoryInput.value = '';
       selectedCategory = '';
@@ -474,12 +481,12 @@
       renderAll();
       showToast(`Added "${name}" to ${state.activeList}`);
 
-      // Automatically switch tab back to Active List
+      // Automatically switch back to Active List view
       switchTab('list');
     });
   }
 
-  // 9. Add Custom Category Chip
+  // 10. Add Custom Category Chip Button
   if (addChipBtn) {
     addChipBtn.addEventListener('click', () => {
       const val = customChipInput.value.trim();
@@ -502,7 +509,7 @@
   // Search Filter Input
   if (searchInput) searchInput.addEventListener('input', renderItems);
 
-  // Undo / Redo Actions
+  // Undo / Redo
   if (undoBtn) {
     undoBtn.addEventListener('click', () => {
       if (undoStack.length === 0) return;
@@ -525,7 +532,7 @@
     });
   }
 
-  // 10. Initialization & Firebase Realtime Live Sync
+  // 11. Initialization & Firebase Realtime Live Sync
   function init() {
     state = loadState();
 
