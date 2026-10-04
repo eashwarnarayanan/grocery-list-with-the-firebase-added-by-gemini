@@ -80,10 +80,24 @@
 
             <label for="categoryInput">Category (auto-detected or custom)</label>
             <input id="categoryInput" type="text" placeholder="e.g. 🍞 Bakery" autocomplete="off" />
-            <p class="hint" id="categoryHint">Type item name above to auto-detect, or type your own custom category!</p>
+            <p class="hint" id="categoryHint">Type item name above - category will auto-detect!</p>
 
-            <label>Quick Categories</label>
-            <div id="quickCategories" class="chip-grid"></div>
+            <!-- Quick Categories Box -->
+            <div class="quick-box">
+              <label class="box-label">Quick Categories</label>
+              <div id="quickCategories" class="chip-grid">
+                <button type="button" class="category-chip" data-cat="🥦 Produce">🥦 Produce</button>
+                <button type="button" class="category-chip" data-cat="🥛 Dairy">🥛 Dairy</button>
+                <button type="button" class="category-chip" data-cat="🍞 Bakery">🍞 Bakery</button>
+                <button type="button" class="category-chip" data-cat="🍗 Meat & Seafood">🍗 Meat & Seafood</button>
+                <button type="button" class="category-chip" data-cat="🍿 Snacks">🍿 Snacks</button>
+                <button type="button" class="category-chip" data-cat="🥤 Drinks">🥤 Drinks</button>
+                <button type="button" class="category-chip" data-cat="❄️ Frozen">❄️ Frozen</button>
+                <button type="button" class="category-chip" data-cat="🧽 Household">🧽 Household</button>
+                <button type="button" class="category-chip" data-cat="🍚 Pantry">🍚 Pantry</button>
+                <button type="button" class="category-chip" data-cat="🍛 Indian Store">🍛 Indian Store</button>
+              </div>
+            </div>
 
             <label for="customChipInput">Add Custom Category Chip</label>
             <div class="inline-row">
@@ -133,7 +147,6 @@
 
 <!-- Firebase Compat Libraries -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script src="script.js"></script>
