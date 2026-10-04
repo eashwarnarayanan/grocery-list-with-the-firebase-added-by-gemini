@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  // Firebase Configuration[cite: 1]
+  // 1. Firebase Realtime Database Configuration
   const firebaseConfig = {
     apiKey: "AIzaSyC7H4Z4SHfpFaZXJdMeAKG9szDg2KUdBpo",
     authDomain: "grocery-list-5533e.firebaseapp.com",
@@ -13,7 +13,7 @@
     measurementId: "G-LNQZNWG61X"
   };
 
-  // Initialize Firebase Realtime Database
+  // Initialize Firebase Realtime DB safely
   let db = null;
   if (typeof firebase !== 'undefined') {
     if (!firebase.apps.length) {
@@ -25,10 +25,12 @@
     db = firebase.database();
   }
 
+  // Local Storage Helpers
   function safeGet(store, key) { try { return store.getItem(key); } catch (e) { return null; } }
   function safeSet(store, key, value) { try { store.setItem(key, value); } catch (e) { } }
   function safeRemove(store, key) { try { store.removeItem(key); } catch (e) { } }
 
+  // 2. Authentication Handling
   const CREDENTIALS = { username: 'ASWATHY', password: 'HARI' };
   const AUTH_KEY = 'grocery.authed.user';
 
@@ -77,15 +79,7 @@
     showLogin();
   });
 
-  const savedUser = safeGet(localStorage, AUTH_KEY);
-  if (savedUser === CREDENTIALS.username) {
-    currentUser = savedUser;
-    usernameDisplay.textContent = savedUser;
-    showApp();
-  } else {
-    showLogin();
-  }
-
+  // 3. Theme Toggle Setup
   const THEME_KEY = 'grocery.theme';
   const themeBtn = document.getElementById('themeBtn');
 
@@ -108,6 +102,7 @@
 
   applyTheme(currentTheme());
 
+  // 4. Built-in Categories & Default Lists
   const LISTS = ['Grocery List', 'Costco List'];
   const LIST_ICONS = { 'Grocery List': '🛒', 'Costco List': '📦' };
 
@@ -149,6 +144,7 @@
     if (redoBtn) redoBtn.disabled = redoStack.length === 0;
   }
 
+  // Save State locally AND to Firebase Realtime Database
   function saveState() {
     safeSet(localStorage, 'grocery.state', JSON.stringify(state));
     if (db && !isRemoteSync) {
@@ -187,13 +183,17 @@
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+  // 5. Smart Auto-Categorisation & Learning Logic
   function suggestCategory(rawName) {
     const q = rawName.trim().toLowerCase();
     if (!q) return '';
+    // 1st Priority: Check if the app previously "learned" this item
     if (state.learned[q]) return state.learned[q];
+    // 2nd Priority: Check standard built-in keyword list
     for (const [cat, keywords] of Object.entries(BUILT_IN_CATEGORIES)) {
       if (keywords.some(kw => q.includes(kw) || kw.includes(q))) return cat;
     }
+    // Default fallback
     return '📦 Other';
   }
 
@@ -211,7 +211,7 @@
   const tabList = document.getElementById('tabList');
   const tabRemoved = document.getElementById('tabRemoved');
   const toggleAddBtn = document.getElementById('toggleAddBtn');
-  const addPanel = document.getElementById('addPanel');
+  const viewAdd = document.getElementById('viewAdd');
   const viewList = document.getElementById('viewList');
   const viewRemoved = document.getElementById('viewRemoved');
   const addForm = document.getElementById('addForm');
@@ -232,6 +232,30 @@
 
   let selectedCategory = '';
 
+  // 6. View Switching Tabs Logic
+  function switchTab(viewName) {
+    tabList.classList.remove('selected');
+    toggleAddBtn.classList.remove('selected');
+    tabRemoved.classList.remove('selected');
+
+    viewAdd.classList.remove('active');
+    viewList.classList.remove('active');
+    viewRemoved.classList.remove('active');
+
+    if (viewName === 'add') {
+      toggleAddBtn.classList.add('selected');
+      viewAdd.classList.add('active');
+      if (itemName) itemName.focus();
+    } else if (viewName === 'removed') {
+      tabRemoved.classList.add('selected');
+      viewRemoved.classList.add('active');
+    } else {
+      tabList.classList.add('selected');
+      viewList.classList.add('active');
+    }
+  }
+
+  // Render Sidebar Lists
   function renderSidebar() {
     if (!listNav) return;
     listNav.innerHTML = '';
@@ -249,6 +273,7 @@
     });
   }
 
+  // Render Category Quick Chips
   function renderQuickCategories() {
     if (!quickCategories) return;
     quickCategories.innerHTML = '';
@@ -277,6 +302,7 @@
     updateUndoRedoButtons();
   }
 
+  // Render Active & Removed Items
   function renderItems() {
     const items = activeItems();
     const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
@@ -287,11 +313,11 @@
     if (countActive) countActive.textContent = items.filter(i => !i.removed).length;
     if (countRemoved) countRemoved.textContent = removedList.length;
 
-    // Active List Render
+    // Render Active List
     if (listGroups) {
       listGroups.innerHTML = '';
       if (activeList.length === 0) {
-        listGroups.innerHTML = '<div class="empty">No items found in this list.</div>';
+        listGroups.innerHTML = '<div class="empty">No items in this list. Click "+ Add Item" above to add!</div>';
       } else {
         const grouped = {};
         activeList.forEach(item => {
@@ -348,7 +374,7 @@
       }
     }
 
-    // Removed List Render
+    // Render Removed Items List
     if (removedGroups) {
       removedGroups.innerHTML = '';
       if (removedList.length === 0) {
@@ -396,7 +422,7 @@
     }
   }
 
-  // Auto-detect category
+  // 7. Auto-detect category on typing
   if (itemName) {
     itemName.addEventListener('input', () => {
       const detected = suggestCategory(itemName.value);
@@ -406,7 +432,7 @@
     });
   }
 
-  // Form Submit - Add Item
+  // 8. Handle Item Form Submission
   if (addForm) {
     addForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -419,10 +445,12 @@
 
       pushHistory();
 
+      // If category is custom, save to custom chips list
       if (category && !BUILT_IN_CATEGORIES[category] && !state.customChips.includes(category)) {
         state.customChips.push(category);
       }
 
+      // Feature: LEARN this item's custom category mapping for next time!
       state.learned[name.toLowerCase()] = category;
 
       activeItems().push({
@@ -436,16 +464,22 @@
       });
 
       saveState();
+
+      // Reset Form Fields
       itemName.value = '';
       categoryInput.value = '';
       selectedCategory = '';
       quantityInput.value = '1';
+
       renderAll();
       showToast(`Added "${name}" to ${state.activeList}`);
+
+      // Automatically switch tab back to Active List
+      switchTab('list');
     });
   }
 
-  // Add Custom Category Chip
+  // 9. Add Custom Category Chip
   if (addChipBtn) {
     addChipBtn.addEventListener('click', () => {
       const val = customChipInput.value.trim();
@@ -460,38 +494,15 @@
     });
   }
 
-  // Tab switching
-  if (tabList) {
-    tabList.addEventListener('click', () => {
-      tabList.classList.add('selected');
-      tabRemoved.classList.remove('selected');
-      viewList.classList.add('active');
-      viewRemoved.classList.remove('active');
-    });
-  }
+  // Tab Listeners
+  if (tabList) tabList.addEventListener('click', () => switchTab('list'));
+  if (toggleAddBtn) toggleAddBtn.addEventListener('click', () => switchTab('add'));
+  if (tabRemoved) tabRemoved.addEventListener('click', () => switchTab('removed'));
 
-  if (tabRemoved) {
-    tabRemoved.addEventListener('click', () => {
-      tabRemoved.classList.add('selected');
-      tabList.classList.remove('selected');
-      viewRemoved.classList.add('active');
-      viewList.classList.remove('active');
-    });
-  }
+  // Search Filter Input
+  if (searchInput) searchInput.addEventListener('input', renderItems);
 
-  // Toggle Panel
-  if (toggleAddBtn) {
-    toggleAddBtn.addEventListener('click', () => {
-      addPanel.classList.toggle('open');
-    });
-  }
-
-  // Search Filter
-  if (searchInput) {
-    searchInput.addEventListener('input', renderItems);
-  }
-
-  // Undo / Redo
+  // Undo / Redo Actions
   if (undoBtn) {
     undoBtn.addEventListener('click', () => {
       if (undoStack.length === 0) return;
@@ -514,10 +525,10 @@
     });
   }
 
+  // 10. Initialization & Firebase Realtime Live Sync
   function init() {
     state = loadState();
 
-    // Firebase live synchronization
     if (db) {
       db.ref('groceryState').on('value', (snapshot) => {
         const remoteData = snapshot.val();
@@ -534,7 +545,13 @@
     renderAll();
   }
 
+  const savedUser = safeGet(localStorage, AUTH_KEY);
   if (savedUser === CREDENTIALS.username) {
+    currentUser = savedUser;
+    usernameDisplay.textContent = savedUser;
+    showApp();
     init();
+  } else {
+    showLogin();
   }
 })();
