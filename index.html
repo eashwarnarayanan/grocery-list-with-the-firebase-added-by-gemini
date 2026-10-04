@@ -70,7 +70,7 @@
 
     <section class="card">
 
-      <!-- View 1: Add New Item Screen (No list below) -->
+      <!-- View 1: Add New Item Screen -->
       <div id="viewAdd" class="view">
         <div id="addPanel" class="add-panel">
           <h3>Add New Grocery Item</h3>
@@ -79,8 +79,8 @@
             <input id="itemName" type="text" placeholder="e.g. Puff pastry, Apples, Milk..." autocomplete="off" />
 
             <label for="categoryInput">Category (auto-detected or custom)</label>
-            <input id="categoryInput" type="text" placeholder="e.g. 🍞 Bakery" autocomplete="off" readonly style="background-color: var(--chip-bg); cursor: default;" />
-            <p class="hint" id="categoryHint">Type item name above - category will auto-detect!</p>
+            <input id="categoryInput" type="text" placeholder="e.g. 🍞 Bakery" autocomplete="off" />
+            <p class="hint" id="categoryHint">Type item name above to auto-detect, or type your own custom category!</p>
 
             <label>Quick Categories</label>
             <div id="quickCategories" class="chip-grid"></div>
