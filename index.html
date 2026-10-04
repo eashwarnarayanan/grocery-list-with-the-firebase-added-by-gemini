@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Grocery List</title>
+<title>Smart Grocery Assistant</title>
 <script>
   (function () {
     try {
@@ -17,16 +17,17 @@
 </head>
 <body>
 
+<!-- Login Screen -->
 <div id="loginScreen" class="screen" style="display: flex;">
   <form id="loginForm" class="login-card">
-    <div class="login-brand">🛒 Grocery List</div>
-    <p class="login-sub">Sign in to manage your smart grocery list</p>
+    <div class="login-brand">🛒 Smart List</div>
+    <p class="login-sub">Sign in to manage your auto-categorised shopping list</p>
 
     <label for="loginUsername">Username</label>
-    <input id="loginUsername" type="text" autocomplete="username" placeholder="Username" />
+    <input id="loginUsername" type="text" autocomplete="username" placeholder="Username" required />
 
     <label for="loginPassword">Password</label>
-    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required />
 
     <p id="loginError" class="error-text" style="display: none;">Incorrect username or password.</p>
 
@@ -34,13 +35,16 @@
   </form>
 </div>
 
+<!-- Main Application -->
 <div id="appRoot" class="app" style="display: none;">
 
+  <!-- Sidebar: Multi-list selection -->
   <aside class="sidebar">
     <div class="sidebar-brand">🛒 Smart List</div>
     <nav id="listNav" class="list-nav"></nav>
   </aside>
 
+  <!-- Main Content Area -->
   <main class="main">
     <header class="page-header">
       <div>
@@ -54,6 +58,7 @@
       </div>
     </header>
 
+    <!-- Navigation Tabs & Actions -->
     <nav class="tabs-row">
       <button class="pill selected" id="tabList" type="button">Active List <span class="count" id="countActive">0</span></button>
       <button class="pill pill-primary" id="toggleAddBtn" type="button">+ Add Item</button>
@@ -65,7 +70,7 @@
 
     <section class="card">
 
-      <!-- View: Add New Grocery Item -->
+      <!-- View 1: Add New Item Screen (No list below) -->
       <div id="viewAdd" class="view">
         <div id="addPanel" class="add-panel">
           <h3>Add New Grocery Item</h3>
@@ -109,13 +114,13 @@
         </div>
       </div>
 
-      <!-- View: Active List -->
+      <!-- View 2: Active List View -->
       <div id="viewList" class="view active">
         <input id="searchInput" type="text" class="search-input" placeholder="Search this list…" />
         <div id="listGroups" class="groups"></div>
       </div>
 
-      <!-- View: Removed Items -->
+      <!-- View 3: Removed Items View -->
       <div id="viewRemoved" class="view">
         <div id="removedGroups" class="groups"></div>
       </div>
@@ -126,7 +131,7 @@
 
 <div id="toast" class="toast" style="display: none;"></div>
 
-<!-- Firebase SDKs -->
+<!-- Firebase Compat Libraries -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
